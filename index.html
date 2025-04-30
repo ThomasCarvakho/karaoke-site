@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Karaokê ao Vivo</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <style>
     body {
       background-color: #121212;
@@ -22,9 +23,6 @@
     header h2 {
       margin: 0;
       font-size: 24px;
-    }
-    header img {
-      height: 40px;
     }
     #playerContainer {
       display: flex;
@@ -64,13 +62,13 @@
     audio {
       width: 300px;
       margin-left: 20px;
+      display: none;
     }
   </style>
 </head>
 <body>
   <header>
     <h2>🎤 Karaokê ao Vivo</h2>
-    <img src="logo.png" alt="Logo do bar" />
   </header>
 
   <div id="playerContainer">
@@ -89,7 +87,7 @@
 
   <div style="padding-left: 20px;">
     <h3>🎶 Música ambiente</h3>
-    <audio controls loop autoplay>
+    <audio id="ambientPlayer" loop>
       <source src="Melodic.mp3" type="audio/mpeg">
       Seu navegador não suporta áudio.
     </audio>
@@ -101,6 +99,7 @@
     let player;
     let previousRaw = "";
     const apiKey = "AIzaSyAhM3a37WNWD2j7GbnJ4t43XlN8JIqhjXU";
+    const ambientAudio = document.getElementById("ambientPlayer");
 
     function getValidPlaylist(rawList) {
       const list = [];
@@ -126,6 +125,7 @@
       playlist.splice(index + current, 1);
       savePlaylist(playlist);
       updateQueueDisplay();
+      checkAmbientAudio();
     }
 
     function clearPlaylist() {
@@ -143,54 +143,55 @@
         const li = document.createElement("li");
         li.textContent = "Nenhuma música na fila.";
         ul.appendChild(li);
-        return;
+      } else {
+        playlist.forEach((item, i) => {
+          if (i < current) return;
+          const li = document.createElement("li");
+          li.textContent = "Carregando...";
+
+          fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${item.id}&key=${apiKey}`)
+            .then(response => response.json())
+            .then(data => {
+              const title = data.items[0]?.snippet?.title || "(sem título)";
+              li.textContent = `${item.singer}: ${title}`;
+              const rm = document.createElement("span");
+              rm.textContent = "❌";
+              rm.className = "remove-btn";
+              rm.onclick = () => removeItem(i - current);
+              li.appendChild(rm);
+            })
+            .catch(() => {
+              li.textContent = `${item.singer}: (erro ao carregar título)`;
+            });
+
+          ul.appendChild(li);
+        });
       }
-
-      playlist.forEach((item, i) => {
-        if (i < current) return;
-
-        const li = document.createElement("li");
-        li.textContent = "Carregando...";
-
-        fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${item.id}&key=${apiKey}`)
-          .then(response => response.json())
-          .then(data => {
-            const title = data.items[0]?.snippet?.title || "(sem título)";
-            li.textContent = `${item.singer}: ${title}`;
-            const rm = document.createElement("span");
-            rm.textContent = "❌";
-            rm.className = "remove-btn";
-            rm.onclick = () => removeItem(i - current);
-            li.appendChild(rm);
-          })
-          .catch(() => {
-            li.textContent = `${item.singer}: (erro ao carregar título)`;
-          });
-
-        ul.appendChild(li);
-      });
     }
 
     function loadNextVideo() {
       if (current >= playlist.length) {
-        document.getElementById('status').innerText = 'Fim da playlist ou nenhuma música foi adicionada ainda.';
+        document.getElementById('status').innerText = 'Nenhuma música na fila.';
+        checkAmbientAudio(true);
         return;
       }
       const videoId = playlist[current].id;
       player.loadVideoById(videoId);
       current++;
       updateQueueDisplay();
+      checkAmbientAudio(false);
     }
 
     function skipSong() {
-      player.stopVideo();
+      loadNextVideo();
     }
 
     function onYouTubeIframeAPIReady() {
       const raw = localStorage.getItem('karaokePlaylist') || '[]';
       playlist = getValidPlaylist(raw);
       if (!playlist.length) {
-        document.getElementById('status').innerText = 'Nenhuma música na playlist. Acesse a página secreta para adicionar.';
+        document.getElementById('status').innerText = 'Nenhuma música na playlist.';
+        checkAmbientAudio(true);
         return;
       }
 
@@ -202,6 +203,7 @@
             player.cueVideoById(playlist[0].id);
             current = 1;
             updateQueueDisplay();
+            checkAmbientAudio(false);
           },
           'onStateChange': (event) => {
             if (event.data === YT.PlayerState.ENDED) {
@@ -212,11 +214,22 @@
       });
     }
 
+    function checkAmbientAudio(shouldPlay = false) {
+      if (shouldPlay) {
+        ambientAudio.style.display = "block";
+        ambientAudio.play().catch(() => {});
+      } else {
+        ambientAudio.pause();
+        ambientAudio.style.display = "none";
+      }
+    }
+
     function checkForUpdates() {
       const raw = localStorage.getItem('karaokePlaylist') || '[]';
       if (raw !== previousRaw) {
         playlist = getValidPlaylist(raw);
         updateQueueDisplay();
+        checkAmbientAudio(current >= playlist.length);
         previousRaw = raw;
       }
     }
