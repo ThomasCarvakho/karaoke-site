@@ -2,27 +2,154 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Karaokê - Adicionar Músicas</title>
+  <title>Karaokê - Playlist</title>
+  <style>
+    #playerContainer {
+      display: flex;
+      gap: 30px;
+    }
+    #queue {
+      max-width: 400px;
+      border-left: 2px solid #ccc;
+      padding-left: 20px;
+    }
+    #queue h3 {
+      margin-top: 0;
+    }
+    #queue ul {
+      list-style-type: decimal;
+      padding-left: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Adicionar música à playlist</h2>
-  <input type="text" id="youtubeUrl" placeholder="Cole o link do YouTube aqui" size="50">
-  <button onclick="addToPlaylist()">Adicionar</button>
+  <h2>🎤 Karaokê ao vivo</h2>
+  <div id="playerContainer">
+    <div id="player"></div>
+    <div id="queue">
+      <h3>🎵 Próximas músicas</h3>
+      <ul id="playlistQueue"></ul>
+    </div>
+  </div>
+  <p id="status" style="color:red;"></p>
+
+  <h3>🎶 Música ambiente</h3>
+  <audio controls loop autoplay>
+    <source src="Melodic.mp3" type="audio/mpeg">
+    Seu navegador não suporta áudio.
+  </audio>
+
+  <iframe id="hiddenFrame" style="display:none;"></iframe>
 
   <script>
-    function addToPlaylist() {
-      const url = document.getElementById('youtubeUrl').value;
-      if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-        alert('Por favor, insira um link válido do YouTube.');
+    let playlist = [];
+    let current = 0;
+    let player;
+    let previousPlaylist = "";
+    let titleCache = {};
+
+    function extractVideoID(url) {
+      const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    function fetchVideoTitle(videoId, callback) {
+      if (titleCache[videoId]) {
+        callback(titleCache[videoId]);
         return;
       }
 
-      const playlist = JSON.parse(localStorage.getItem('karaokePlaylist') || '[]');
-      playlist.push(url);
-      localStorage.setItem('karaokePlaylist', JSON.stringify(playlist));
-      alert('Adicionado com sucesso!');
-      document.getElementById('youtubeUrl').value = '';
+      const iframe = document.getElementById("hiddenFrame");
+      iframe.src = "https://www.youtube.com/embed/" + videoId;
+      iframe.onload = () => {
+        try {
+          const title = iframe.contentDocument.title.replace(" - YouTube", "");
+          titleCache[videoId] = title;
+          callback(title);
+        } catch (e) {
+          callback("Vídeo: " + videoId);
+        }
+      };
     }
+
+    function updateQueueDisplay() {
+      const ul = document.getElementById("playlistQueue");
+      ul.innerHTML = "";
+
+      for (let i = current; i < playlist.length; i++) {
+        const videoId = extractVideoID(playlist[i]);
+        const li = document.createElement("li");
+        li.textContent = "Carregando título...";
+        ul.appendChild(li);
+
+        if (videoId) {
+          fetchVideoTitle(videoId, function(title) {
+            li.textContent = title;
+          });
+        } else {
+          li.textContent = "Link inválido";
+        }
+      }
+    }
+
+    function loadNextVideo() {
+      if (current >= playlist.length) {
+        document.getElementById('status').innerText = 'Fim da playlist ou nenhuma música foi adicionada ainda.';
+        return;
+      }
+      const videoId = extractVideoID(playlist[current]);
+      if (!videoId) {
+        current++;
+        loadNextVideo();
+        return;
+      }
+      player.loadVideoById(videoId);
+      current++;
+      updateQueueDisplay();
+    }
+
+    function onYouTubeIframeAPIReady() {
+      playlist = JSON.parse(localStorage.getItem('karaokePlaylist') || '[]');
+      if (!playlist.length) {
+        document.getElementById('status').innerText = 'Nenhuma música na playlist. Acesse a página secreta para adicionar.';
+        return;
+      }
+
+      player = new YT.Player('player', {
+        height: '360',
+        width: '640',
+        events: {
+          'onReady': () => {
+            const videoId = extractVideoID(playlist[0]);
+            if (videoId) {
+              player.cueVideoById(videoId);
+              current = 1;
+              updateQueueDisplay();
+            }
+          },
+          'onStateChange': (event) => {
+            if (event.data === YT.PlayerState.ENDED) {
+              loadNextVideo();
+            }
+          }
+        }
+      });
+    }
+
+    function checkForUpdates() {
+      const raw = localStorage.getItem('karaokePlaylist') || '[]';
+      if (raw !== previousPlaylist) {
+        previousPlaylist = raw;
+        playlist = JSON.parse(raw);
+        updateQueueDisplay();
+      }
+    }
+
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.body.appendChild(tag);
+
+    setInterval(checkForUpdates, 3000);
   </script>
 </body>
 </html>
