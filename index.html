@@ -62,7 +62,6 @@
     audio {
       width: 300px;
       margin-left: 20px;
-      display: block;
     }
   </style>
 </head>
@@ -88,9 +87,9 @@
   <div style="padding-left: 20px;">
     <h3>🎶 Música ambiente</h3>
     <audio id="ambientPlayer" loop controls autoplay>
-  <source src="Melodic.mp3" type="audio/mpeg">
-  Seu navegador não suporta áudio.
-</audio>
+      <source src="Melodic.mp3" type="audio/mpeg">
+      Seu navegador não suporta áudio.
+    </audio>
     <p id="ambientWarning" style="color:orange; display:none;">
       ⚠️ A reprodução automática foi bloqueada. Clique no botão abaixo para ativar a música ambiente:
     </p>
@@ -205,25 +204,24 @@
     }
 
     function checkAmbientAudio(shouldPlay = false) {
-  ambientAudio.style.display = "block"; // Sempre visível
-
-  if (shouldPlay) {
-    ambientAudio.play()
-      .then(() => {
+      if (shouldPlay) {
+        ambientAudio.style.display = "block";
+        ambientAudio.play()
+          .then(() => {
+            document.getElementById("ambientWarning").style.display = "none";
+            document.getElementById("playAmbientBtn").style.display = "none";
+          })
+          .catch(() => {
+            document.getElementById("ambientWarning").style.display = "block";
+            document.getElementById("playAmbientBtn").style.display = "block";
+          });
+      } else {
+        ambientAudio.pause();
+        ambientAudio.style.display = "block";
         document.getElementById("ambientWarning").style.display = "none";
         document.getElementById("playAmbientBtn").style.display = "none";
-      })
-      .catch(() => {
-        document.getElementById("ambientWarning").style.display = "block";
-        document.getElementById("playAmbientBtn").style.display = "block";
-      });
-  } else {
-    ambientAudio.pause();
-    document.getElementById("ambientWarning").style.display = "none";
-    document.getElementById("playAmbientBtn").style.display = "none";
-  }
-}
-
+      }
+    }
 
     function onYouTubeIframeAPIReady() {
       const raw = localStorage.getItem('karaokePlaylist') || '[]';
@@ -253,7 +251,16 @@
       });
     }
 
-    function checkForUpdates() {
+    let lastSkip = 0;
+function checkSkipRequest() {
+  const skipTimestamp = parseInt(localStorage.getItem("karaokeSkipRequest") || "0");
+  if (skipTimestamp > lastSkip) {
+    lastSkip = skipTimestamp;
+    skipSong();
+  }
+}
+
+function checkForUpdates() {
       const raw = localStorage.getItem('karaokePlaylist') || '[]';
       if (raw !== previousRaw) {
         playlist = getValidPlaylist(raw);
@@ -267,7 +274,10 @@
     tag.src = "https://www.youtube.com/iframe_api";
     document.body.appendChild(tag);
 
-    setInterval(checkForUpdates, 3000);
+    setInterval(() => {
+  checkForUpdates();
+  checkSkipRequest();
+}, 3000);
   </script>
 </body>
 </html>
