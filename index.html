@@ -2,15 +2,38 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Karaokê - Playlist</title>
+  <title>Karaokê ao Vivo</title>
   <style>
+    body {
+      background-color: #121212;
+      color: #f5f5f5;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #1e1e1e;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #333;
+    }
+    header h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+    header img {
+      height: 40px;
+    }
     #playerContainer {
       display: flex;
       gap: 30px;
+      padding: 20px;
     }
     #queue {
       max-width: 400px;
-      border-left: 2px solid #ccc;
+      border-left: 2px solid #333;
       padding-left: 20px;
     }
     #queue h3 {
@@ -20,24 +43,57 @@
       list-style-type: decimal;
       padding-left: 20px;
     }
+    .remove-btn {
+      margin-left: 10px;
+      cursor: pointer;
+      color: #ff4d4d;
+      font-weight: bold;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background-color: #333;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #555;
+    }
+    audio {
+      width: 300px;
+      margin-left: 20px;
+    }
   </style>
 </head>
 <body>
-  <h2>🎤 Karaokê ao vivo</h2>
+  <header>
+    <h2>🎤 Karaokê ao Vivo</h2>
+    <img src="logo.png" alt="Logo do bar" />
+  </header>
+
   <div id="playerContainer">
-    <div id="player"></div>
+    <div>
+      <div id="player"></div>
+      <button onclick="skipSong()">⏭️ Pular Música</button>
+    </div>
     <div id="queue">
       <h3>🎵 Próximas músicas</h3>
       <ul id="playlistQueue"></ul>
+      <button onclick="clearPlaylist()">🗑️ Limpar toda a fila</button>
     </div>
   </div>
-  <p id="status" style="color:red;"></p>
 
-  <h3>🎶 Música ambiente</h3>
-  <audio controls loop autoplay>
-    <source src="Melodic.mp3" type="audio/mpeg">
-    Seu navegador não suporta áudio.
-  </audio>
+  <p id="status" style="color:#ff4d4d; padding-left:20px;"></p>
+
+  <div style="padding-left: 20px;">
+    <h3>🎶 Música ambiente</h3>
+    <audio controls loop autoplay>
+      <source src="Melodic.mp3" type="audio/mpeg">
+      Seu navegador não suporta áudio.
+    </audio>
+  </div>
 
   <script>
     let playlist = [];
@@ -45,7 +101,39 @@
     let player;
     let previousRaw = "";
     const apiKey = "AIzaSyAhM3a37WNWD2j7GbnJ4t43XlN8JIqhjXU";
-    const titleCache = {};
+
+    function getValidPlaylist(rawList) {
+      const list = [];
+      try {
+        const parsed = JSON.parse(rawList);
+        for (const item of parsed) {
+          if (typeof item === 'object' && item.id && item.singer) {
+            list.push(item);
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao validar playlist:", e);
+      }
+      return list;
+    }
+
+    function savePlaylist(newList) {
+      localStorage.setItem('karaokePlaylist', JSON.stringify(newList));
+      previousRaw = JSON.stringify(newList);
+    }
+
+    function removeItem(index) {
+      playlist.splice(index + current, 1);
+      savePlaylist(playlist);
+      updateQueueDisplay();
+    }
+
+    function clearPlaylist() {
+      if (confirm("Tem certeza que deseja limpar toda a fila?")) {
+        localStorage.removeItem('karaokePlaylist');
+        location.reload();
+      }
+    }
 
     function updateQueueDisplay() {
       const ul = document.getElementById("playlistQueue");
@@ -58,8 +146,9 @@
         return;
       }
 
-      for (let i = current; i < playlist.length; i++) {
-        const item = playlist[i];
+      playlist.forEach((item, i) => {
+        if (i < current) return;
+
         const li = document.createElement("li");
         li.textContent = "Carregando...";
 
@@ -68,13 +157,18 @@
           .then(data => {
             const title = data.items[0]?.snippet?.title || "(sem título)";
             li.textContent = `${item.singer}: ${title}`;
+            const rm = document.createElement("span");
+            rm.textContent = "❌";
+            rm.className = "remove-btn";
+            rm.onclick = () => removeItem(i - current);
+            li.appendChild(rm);
           })
           .catch(() => {
             li.textContent = `${item.singer}: (erro ao carregar título)`;
           });
 
         ul.appendChild(li);
-      }
+      });
     }
 
     function loadNextVideo() {
@@ -88,8 +182,13 @@
       updateQueueDisplay();
     }
 
+    function skipSong() {
+      player.stopVideo();
+    }
+
     function onYouTubeIframeAPIReady() {
-      playlist = JSON.parse(localStorage.getItem('karaokePlaylist') || '[]');
+      const raw = localStorage.getItem('karaokePlaylist') || '[]';
+      playlist = getValidPlaylist(raw);
       if (!playlist.length) {
         document.getElementById('status').innerText = 'Nenhuma música na playlist. Acesse a página secreta para adicionar.';
         return;
@@ -116,9 +215,9 @@
     function checkForUpdates() {
       const raw = localStorage.getItem('karaokePlaylist') || '[]';
       if (raw !== previousRaw) {
-        previousRaw = raw;
-        playlist = JSON.parse(raw);
+        playlist = getValidPlaylist(raw);
         updateQueueDisplay();
+        previousRaw = raw;
       }
     }
 
