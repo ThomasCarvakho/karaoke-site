@@ -39,56 +39,41 @@
     Seu navegador não suporta áudio.
   </audio>
 
-  <iframe id="hiddenFrame" style="display:none;"></iframe>
-
   <script>
     let playlist = [];
     let current = 0;
     let player;
-    let previousPlaylist = "";
-    let titleCache = {};
-
-    function extractVideoID(url) {
-      const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-      return match ? match[1] : null;
-    }
-
-    function fetchVideoTitle(videoId, callback) {
-      if (titleCache[videoId]) {
-        callback(titleCache[videoId]);
-        return;
-      }
-
-      const iframe = document.getElementById("hiddenFrame");
-      iframe.src = "https://www.youtube.com/embed/" + videoId;
-      iframe.onload = () => {
-        try {
-          const title = iframe.contentDocument.title.replace(" - YouTube", "");
-          titleCache[videoId] = title;
-          callback(title);
-        } catch (e) {
-          callback("Vídeo: " + videoId);
-        }
-      };
-    }
+    let previousRaw = "";
+    const apiKey = "AIzaSyAhM3a37WNWD2j7GbnJ4t43XlN8JIqhjXU";
+    const titleCache = {};
 
     function updateQueueDisplay() {
       const ul = document.getElementById("playlistQueue");
       ul.innerHTML = "";
 
-      for (let i = current; i < playlist.length; i++) {
-        const videoId = extractVideoID(playlist[i]);
+      if (!playlist.length || current >= playlist.length) {
         const li = document.createElement("li");
-        li.textContent = "Carregando título...";
+        li.textContent = "Nenhuma música na fila.";
         ul.appendChild(li);
+        return;
+      }
 
-        if (videoId) {
-          fetchVideoTitle(videoId, function(title) {
-            li.textContent = title;
+      for (let i = current; i < playlist.length; i++) {
+        const item = playlist[i];
+        const li = document.createElement("li");
+        li.textContent = "Carregando...";
+
+        fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${item.id}&key=${apiKey}`)
+          .then(response => response.json())
+          .then(data => {
+            const title = data.items[0]?.snippet?.title || "(sem título)";
+            li.textContent = `${item.singer}: ${title}`;
+          })
+          .catch(() => {
+            li.textContent = `${item.singer}: (erro ao carregar título)`;
           });
-        } else {
-          li.textContent = "Link inválido";
-        }
+
+        ul.appendChild(li);
       }
     }
 
@@ -97,12 +82,7 @@
         document.getElementById('status').innerText = 'Fim da playlist ou nenhuma música foi adicionada ainda.';
         return;
       }
-      const videoId = extractVideoID(playlist[current]);
-      if (!videoId) {
-        current++;
-        loadNextVideo();
-        return;
-      }
+      const videoId = playlist[current].id;
       player.loadVideoById(videoId);
       current++;
       updateQueueDisplay();
@@ -120,12 +100,9 @@
         width: '640',
         events: {
           'onReady': () => {
-            const videoId = extractVideoID(playlist[0]);
-            if (videoId) {
-              player.cueVideoById(videoId);
-              current = 1;
-              updateQueueDisplay();
-            }
+            player.cueVideoById(playlist[0].id);
+            current = 1;
+            updateQueueDisplay();
           },
           'onStateChange': (event) => {
             if (event.data === YT.PlayerState.ENDED) {
@@ -138,8 +115,8 @@
 
     function checkForUpdates() {
       const raw = localStorage.getItem('karaokePlaylist') || '[]';
-      if (raw !== previousPlaylist) {
-        previousPlaylist = raw;
+      if (raw !== previousRaw) {
+        previousRaw = raw;
         playlist = JSON.parse(raw);
         updateQueueDisplay();
       }
