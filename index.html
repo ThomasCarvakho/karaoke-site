@@ -91,6 +91,12 @@
       <source src="Melodic.mp3" type="audio/mpeg">
       Seu navegador não suporta áudio.
     </audio>
+    <p id="ambientWarning" style="color:orange; display:none;">
+      ⚠️ A reprodução automática foi bloqueada. Clique no botão abaixo para ativar a música ambiente:
+    </p>
+    <button id="playAmbientBtn" onclick="tryPlayAmbient()" style="display:none;">
+      ▶️ Ativar Música Ambiente
+    </button>
   </div>
 
   <script>
@@ -186,6 +192,38 @@
       loadNextVideo();
     }
 
+    function tryPlayAmbient() {
+      ambientAudio.play()
+        .then(() => {
+          document.getElementById("ambientWarning").style.display = "none";
+          document.getElementById("playAmbientBtn").style.display = "none";
+        })
+        .catch(() => {
+          document.getElementById("ambientWarning").style.display = "block";
+          document.getElementById("playAmbientBtn").style.display = "block";
+        });
+    }
+
+    function checkAmbientAudio(shouldPlay = false) {
+      if (shouldPlay) {
+        ambientAudio.style.display = "block";
+        ambientAudio.play()
+          .then(() => {
+            document.getElementById("ambientWarning").style.display = "none";
+            document.getElementById("playAmbientBtn").style.display = "none";
+          })
+          .catch(() => {
+            document.getElementById("ambientWarning").style.display = "block";
+            document.getElementById("playAmbientBtn").style.display = "block";
+          });
+      } else {
+        ambientAudio.pause();
+        ambientAudio.style.display = "none";
+        document.getElementById("ambientWarning").style.display = "none";
+        document.getElementById("playAmbientBtn").style.display = "none";
+      }
+    }
+
     function onYouTubeIframeAPIReady() {
       const raw = localStorage.getItem('karaokePlaylist') || '[]';
       playlist = getValidPlaylist(raw);
@@ -212,16 +250,6 @@
           }
         }
       });
-    }
-
-    function checkAmbientAudio(shouldPlay = false) {
-      if (shouldPlay) {
-        ambientAudio.style.display = "block";
-        ambientAudio.play().catch(() => {});
-      } else {
-        ambientAudio.pause();
-        ambientAudio.style.display = "none";
-      }
     }
 
     function checkForUpdates() {
