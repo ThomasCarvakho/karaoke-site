@@ -83,29 +83,27 @@
   <script>
     const apiKey = "AIzaSyAhM3a37WNWD2j7GbnJ4t43XlN8JIqhjXU";
 
-   function extractVideoID(url) {
-  const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-  return match ? match[1] : null;
-}
-
+    function extractVideoID(url) {
+      const match = url.match(/(?:v=|\/|youtu\.be\/)([0-9A-Za-z_-]{11})/);
+      return match ? match[1] : null;
+    }
 
     function previewVideo() {
-  const url = document.getElementById("youtubeUrl").value;
-  const videoId = extractVideoID(url);
-  const iframe = document.getElementById("videoPreview");
-  const button = document.getElementById("addButton");
+      const url = document.getElementById("youtubeUrl").value;
+      const videoId = extractVideoID(url);
+      const iframe = document.getElementById("videoPreview");
+      const button = document.getElementById("addButton");
 
-  if (videoId) {
-    iframe.src = "https://www.youtube.com/embed/" + videoId;
-    iframe.style.display = "block";
-    button.disabled = false;
-  } else {
-    iframe.src = "";
-    iframe.style.display = "none";
-    button.disabled = true;
-  }
-}
-
+      if (videoId) {
+        iframe.src = "https://www.youtube.com/embed/" + videoId;
+        iframe.style.display = "block";
+        button.disabled = false;
+      } else {
+        iframe.src = "";
+        iframe.style.display = "none";
+        button.disabled = true;
+      }
+    }
 
     function getPlaylist() {
       try {
