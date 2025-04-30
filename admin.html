@@ -2,38 +2,99 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Karaokê - Adicionar Músicas</title>
+  <title>Admin Karaokê</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f5f5f5;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    input {
+      padding: 8px;
+      margin: 10px 0;
+      width: 100%;
+      max-width: 400px;
+      border: none;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #333;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+    iframe {
+      margin-top: 20px;
+      display: none;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Adicionar música à playlist</h2>
-  <input type="text" id="singerName" placeholder="Nome do cantor(a)" size="30">
-  <br><br>
-  <input type="text" id="youtubeUrl" placeholder="Link do YouTube" size="50">
-  <br><br>
-  <button onclick="addToPlaylist()">Adicionar</button>
+  <h2>🎛️ Painel do Host - Adicionar música</h2>
+  <label for="singerName">Nome do cantor(a):</label>
+  <input type="text" id="singerName" placeholder="Ex: Thomas" />
+
+  <label for="youtubeUrl">Link do vídeo no YouTube:</label>
+  <input type="text" id="youtubeUrl" placeholder="Cole o link do YouTube" oninput="previewVideo()" />
+
+  <button id="addButton" onclick="addToPlaylist()" disabled>Adicionar à fila</button>
+
+  <iframe id="videoPreview" width="400" height="225" frameborder="0" allowfullscreen></iframe>
 
   <script>
-    function addToPlaylist() {
-      const url = document.getElementById('youtubeUrl').value;
-      const name = document.getElementById('singerName').value.trim();
-      if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-        alert('Por favor, insira um link válido do YouTube.');
-        return;
-      }
+    function extractVideoID(url) {
+      const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      return match ? match[1] : null;
+    }
 
-      const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-      const videoId = videoIdMatch ? videoIdMatch[1] : null;
+    function previewVideo() {
+      const url = document.getElementById("youtubeUrl").value;
+      const videoId = extractVideoID(url);
+      const iframe = document.getElementById("videoPreview");
+      const button = document.getElementById("addButton");
+
+      if (videoId) {
+        iframe.src = "https://www.youtube.com/embed/" + videoId;
+        iframe.style.display = "block";
+        button.disabled = false;
+      } else {
+        iframe.src = "";
+        iframe.style.display = "none";
+        button.disabled = true;
+      }
+    }
+
+    function addToPlaylist() {
+      const name = document.getElementById("singerName").value.trim();
+      const url = document.getElementById("youtubeUrl").value.trim();
+      const videoId = extractVideoID(url);
       if (!videoId) {
-        alert("Não foi possível extrair o ID do vídeo.");
+        alert("Link inválido.");
         return;
       }
 
       const playlist = JSON.parse(localStorage.getItem('karaokePlaylist') || '[]');
       playlist.push({ id: videoId, singer: name || "Sem nome" });
       localStorage.setItem('karaokePlaylist', JSON.stringify(playlist));
-      alert('Adicionado com sucesso!');
-      document.getElementById('youtubeUrl').value = '';
-      document.getElementById('singerName').value = '';
+      alert("Adicionado com sucesso!");
+      document.getElementById("youtubeUrl").value = "";
+      document.getElementById("singerName").value = "";
+      previewVideo();
     }
   </script>
 </body>
