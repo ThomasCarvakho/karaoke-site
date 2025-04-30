@@ -29,6 +29,7 @@
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      margin-right: 10px;
     }
     button:disabled {
       background-color: #555;
@@ -72,7 +73,10 @@
 
   <div id="playlistQueue">
     <h3>🎵 Fila atual</h3>
+    <button onclick="skipCurrent()">⏭️ Pular música atual</button>
+    <p id="debugStatus" style="color:orange;"></p>
     <ul id="queueList"></ul>
+    <button onclick="updateQueueDisplay()">🔄 Atualizar fila</button>
     <button onclick="clearPlaylist()">🗑️ Limpar fila inteira</button>
   </div>
 
@@ -145,10 +149,18 @@
       }
     }
 
+    function skipCurrent() {
+      localStorage.setItem("karaokeSkipRequest", Date.now());
+      alert("Pedido para pular a música atual enviado!");
+    }
+
     function updateQueueDisplay() {
       const ul = document.getElementById("queueList");
-      ul.innerHTML = "";
+      const debug = document.getElementById("debugStatus");
       const list = getPlaylist();
+
+      debug.innerText = list.length ? `🎶 ${list.length} música(s) na fila.` : "⚠️ Fila vazia.";
+      ul.innerHTML = "";
 
       if (!list.length) {
         const li = document.createElement("li");
