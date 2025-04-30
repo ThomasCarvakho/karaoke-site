@@ -42,6 +42,20 @@
       display: block;
       margin-top: 15px;
     }
+    #playlistQueue {
+      margin-top: 30px;
+      max-width: 600px;
+    }
+    #playlistQueue ul {
+      list-style-type: decimal;
+      padding-left: 20px;
+    }
+    .remove-btn {
+      margin-left: 10px;
+      cursor: pointer;
+      color: #ff4d4d;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -56,9 +70,17 @@
 
   <iframe id="videoPreview" width="400" height="225" frameborder="0" allowfullscreen></iframe>
 
+  <div id="playlistQueue">
+    <h3>🎵 Fila atual</h3>
+    <ul id="queueList"></ul>
+    <button onclick="clearPlaylist()">🗑️ Limpar fila inteira</button>
+  </div>
+
   <script>
+    const apiKey = "AIzaSyAhM3a37WNWD2j7GbnJ4t43XlN8JIqhjXU";
+
     function extractVideoID(url) {
-      const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      const match = url.match(/(?:v=|\\/)([0-9A-Za-z_-]{11})/);
       return match ? match[1] : null;
     }
 
@@ -79,6 +101,19 @@
       }
     }
 
+    function getPlaylist() {
+      try {
+        return JSON.parse(localStorage.getItem('karaokePlaylist') || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function savePlaylist(list) {
+      localStorage.setItem('karaokePlaylist', JSON.stringify(list));
+      updateQueueDisplay();
+    }
+
     function addToPlaylist() {
       const name = document.getElementById("singerName").value.trim();
       const url = document.getElementById("youtubeUrl").value.trim();
@@ -88,14 +123,63 @@
         return;
       }
 
-      const playlist = JSON.parse(localStorage.getItem('karaokePlaylist') || '[]');
+      const playlist = getPlaylist();
       playlist.push({ id: videoId, singer: name || "Sem nome" });
-      localStorage.setItem('karaokePlaylist', JSON.stringify(playlist));
+      savePlaylist(playlist);
       alert("Adicionado com sucesso!");
       document.getElementById("youtubeUrl").value = "";
       document.getElementById("singerName").value = "";
       previewVideo();
     }
+
+    function removeItem(index) {
+      const playlist = getPlaylist();
+      playlist.splice(index, 1);
+      savePlaylist(playlist);
+    }
+
+    function clearPlaylist() {
+      if (confirm("Tem certeza que deseja apagar toda a fila?")) {
+        localStorage.removeItem('karaokePlaylist');
+        updateQueueDisplay();
+      }
+    }
+
+    function updateQueueDisplay() {
+      const ul = document.getElementById("queueList");
+      ul.innerHTML = "";
+      const list = getPlaylist();
+
+      if (!list.length) {
+        const li = document.createElement("li");
+        li.textContent = "Fila vazia.";
+        ul.appendChild(li);
+        return;
+      }
+
+      list.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.textContent = "Carregando...";
+        ul.appendChild(li);
+
+        fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${item.id}&key=${apiKey}`)
+          .then(res => res.json())
+          .then(data => {
+            const title = data.items[0]?.snippet?.title || "(sem título)";
+            li.textContent = `${item.singer}: ${title}`;
+            const btn = document.createElement("span");
+            btn.textContent = "❌";
+            btn.className = "remove-btn";
+            btn.onclick = () => removeItem(index);
+            li.appendChild(btn);
+          })
+          .catch(() => {
+            li.textContent = `${item.singer}: (erro ao carregar título)`;
+          });
+      });
+    }
+
+    updateQueueDisplay();
   </script>
 </body>
 </html>
