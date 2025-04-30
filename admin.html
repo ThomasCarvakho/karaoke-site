@@ -6,22 +6,34 @@
 </head>
 <body>
   <h2>Adicionar música à playlist</h2>
-  <input type="text" id="youtubeUrl" placeholder="Cole o link do YouTube aqui" size="50">
+  <input type="text" id="singerName" placeholder="Nome do cantor(a)" size="30">
+  <br><br>
+  <input type="text" id="youtubeUrl" placeholder="Link do YouTube" size="50">
+  <br><br>
   <button onclick="addToPlaylist()">Adicionar</button>
 
   <script>
     function addToPlaylist() {
       const url = document.getElementById('youtubeUrl').value;
+      const name = document.getElementById('singerName').value.trim();
       if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
         alert('Por favor, insira um link válido do YouTube.');
         return;
       }
 
+      const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      const videoId = videoIdMatch ? videoIdMatch[1] : null;
+      if (!videoId) {
+        alert("Não foi possível extrair o ID do vídeo.");
+        return;
+      }
+
       const playlist = JSON.parse(localStorage.getItem('karaokePlaylist') || '[]');
-      playlist.push(url);
+      playlist.push({ id: videoId, singer: name || "Sem nome" });
       localStorage.setItem('karaokePlaylist', JSON.stringify(playlist));
       alert('Adicionado com sucesso!');
       document.getElementById('youtubeUrl').value = '';
+      document.getElementById('singerName').value = '';
     }
   </script>
 </body>
