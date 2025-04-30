@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Karaokê - Adicionar Músicas</title>
+</head>
+<body>
+  <h2>Adicionar música à playlist</h2>
+  <input type="text" id="youtubeUrl" placeholder="Cole o link do YouTube aqui" size="50">
+  <button onclick="addToPlaylist()">Adicionar</button>
+
+  <script>
+    function addToPlaylist() {
+      const url = document.getElementById('youtubeUrl').value;
+      if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+        alert('Por favor, insira um link válido do YouTube.');
+        return;
+      }
+
+      const playlist = JSON.parse(localStorage.getItem('karaokePlaylist') || '[]');
+      playlist.push(url);
+      localStorage.setItem('karaokePlaylist', JSON.stringify(playlist));
+      alert('Adicionado com sucesso!');
+      document.getElementById('youtubeUrl').value = '';
+    }
+  </script>
+</body>
+</html>

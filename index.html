@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Karaokê - Playlist</title>
+</head>
+<body>
+  <h2>🎤 Karaokê ao vivo</h2>
+  <div id="player"></div>
+  <p id="status" style="color:red;"></p>
+
+  <h3>🎶 Música ambiente</h3>
+  <audio controls loop autoplay>
+    <source src="Melodic.mp3" type="audio/mpeg">
+    Seu navegador não suporta áudio.
+  </audio>
+
+  <script>
+    let playlist = JSON.parse(localStorage.getItem('karaokePlaylist') || '[]');
+    let current = 0;
+
+    function loadNextVideo() {
+      if (current >= playlist.length) {
+        document.getElementById('status').innerText = 'Fim da playlist ou nenhuma música foi adicionada ainda.';
+        return;
+      }
+
+      const videoId = extractVideoID(playlist[current]);
+      if (!videoId) {
+        current++;
+        loadNextVideo();
+        return;
+      }
+      player.loadVideoById(videoId);
+      current++;
+    }
+
+    function extractVideoID(url) {
+      const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.body.appendChild(tag);
+
+    var player;
+    function onYouTubeIframeAPIReady() {
+      if (!playlist.length) {
+        document.getElementById('status').innerText = 'Nenhuma música na playlist. Acesse a página secreta para adicionar.';
+        return;
+      }
+
+      player = new YT.Player('player', {
+        height: '360',
+        width: '640',
+        events: {
+          'onReady': () => player.cueVideoById(extractVideoID(playlist[0])),
+          'onStateChange': onPlayerStateChange
+        }
+      });
+      current = 1;
+    }
+
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.ENDED) {
+        loadNextVideo();
+      }
+    }
+  </script>
+</body>
+</html>
